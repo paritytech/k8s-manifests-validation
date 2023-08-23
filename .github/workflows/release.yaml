@@ -42,7 +42,7 @@ jobs:
       uses: docker/metadata-action@v4
       with:
         images: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/kube-manifests-validation
+          paritytech/kube-manifests-validation
         tags: |
           type=raw,value=k8s-${{ env.K8S_SCHEMA_VERSION }}-gator-${{ env.GATOR_VERSION }}-datree-${{ env.DATREE_VERSION }}-{{sha}},priority=1002
           type=raw,value={{branch}}-{{sha}},priority=1001
