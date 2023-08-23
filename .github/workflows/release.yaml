@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    branches:
+    - master
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    env:
+      HELM_VERSION:                "3.12.2"
+      GATOR_VERSION:               "3.12.0"
+      DATREE_VERSION:              "1.9.19"
+      YQ_VERSION:                  "4.34.2"
+      K8S_SCHEMA_VERSION:          "1.25.9"
+      K8S_SCHEMA_REPO_COMMIT_SHA:  "a43aa7eceaf4c32c5f45c9fc477588e7a12f18b6" # https://github.com/yannh/kubernetes-json-schema
+      CRDS_SCHEMA_REPO_COMMIT_SHA: "8f0604e873746d6b2d49794e5b37768460e7b545" # https://github.com/datreeio/CRDs-catalog/tree/main
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/kube-manifests-validation
+        tags: |
+          type=raw,value=k8s-${{ K8S_SCHEMA_VERSION }}-gator-${{ GATOR_VERSION }}-datree-${{ DATREE_VERSION }}-{{sha}},priority=1002
+          type=raw,value={{branch}}-{{sha}},priority=1001
+          # set latest tag for default branch
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        build-args: |
+          HELM_VERSION=${{ HELM_VERSION }}
+          GATOR_VERSION=${{ GATOR_VERSION }}
+          DATREE_VERSION=${{ DATREE_VERSION }}
+          YQ_VERSION=${{ YQ_VERSION }}
+          K8S_SCHEMA_VERSION=${{ K8S_SCHEMA_VERSION }}
+          K8S_SCHEMA_REPO_COMMIT_SHA=${{ K8S_SCHEMA_REPO_COMMIT_SHA }}
+          CRDS_SCHEMA_REPO_COMMIT_SHA=${{ CRDS_SCHEMA_REPO_COMMIT_SHA }}
+          VCS_REF=${{ github.ref }}
+          BUILD_DATE=${{ github.event.release.published_at }}
+
