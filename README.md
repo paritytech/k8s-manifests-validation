@@ -12,7 +12,7 @@ Run `validate-k8s-manifests.sh` to see the available input arguments.
 ## Docker
 The script can be run as Docker image:
 ```
-docker run --rm -it docker.io/paritytech/kube-manifests-validation:latest manifests
+docker run --rm -it -v "$(pwd):/git" docker.io/paritytech/kube-manifests-validation:latest manifests
 ```
 
 ## Directory layout

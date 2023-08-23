@@ -70,7 +70,9 @@ RUN set -eu; \
 WORKDIR /app
 
 RUN mkdir -p /root/.datree
-COPY ./datree-policies.yaml ./
+COPY ./datree-policies.yaml validate-k8s-manifests.sh ./
 COPY ./datree-config.yaml /root/.datree/config.yaml
 
 WORKDIR /git
+
+ENTRYPOINT [ "/app/validate-k8s-manifests.sh" ]
