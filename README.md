@@ -4,15 +4,21 @@ Multiple tools ([Gatekeeper](https://open-policy-agent.github.io/gatekeeper/webs
 
 ## Quick start
 ```
-./validate-k8s-manifests.sh my-app
+./validate-k8s-manifests.sh manifests
 ```
 
 Run `validate-k8s-manifests.sh` to see the available input arguments.
 
-## Directory layout
-The script expects a very specific directory layout with Helm chart values. `kubernetes` is a directory that can be passed as the first argument to the script.
+## Docker
+The script can be run as Docker image:
 ```
-kubernetes
+docker run --rm -it docker.io/paritytech/kube-manifests-validation:latest manifests
+```
+
+## Directory layout
+The script expects a very specific directory layout with Helm chart values. `manifests` is a directory that can be passed as the first argument to the script.
+```
+manifests
 └── my-app
     ├── Chart.yaml
     ├── values-dev.yaml
