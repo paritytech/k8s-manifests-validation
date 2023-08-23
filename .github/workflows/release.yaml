@@ -44,7 +44,7 @@ jobs:
         images: |
           ${{ secrets.DOCKERHUB_USERNAME }}/kube-manifests-validation
         tags: |
-          type=raw,value=k8s-${{ K8S_SCHEMA_VERSION }}-gator-${{ GATOR_VERSION }}-datree-${{ DATREE_VERSION }}-{{sha}},priority=1002
+          type=raw,value=k8s-${{ env.K8S_SCHEMA_VERSION }}-gator-${{ env.GATOR_VERSION }}-datree-${{ env.DATREE_VERSION }}-{{sha}},priority=1002
           type=raw,value={{branch}}-{{sha}},priority=1001
           # set latest tag for default branch
           type=raw,value=latest,enable={{is_default_branch}}
@@ -55,13 +55,13 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         build-args: |
-          HELM_VERSION=${{ HELM_VERSION }}
-          GATOR_VERSION=${{ GATOR_VERSION }}
-          DATREE_VERSION=${{ DATREE_VERSION }}
-          YQ_VERSION=${{ YQ_VERSION }}
-          K8S_SCHEMA_VERSION=${{ K8S_SCHEMA_VERSION }}
-          K8S_SCHEMA_REPO_COMMIT_SHA=${{ K8S_SCHEMA_REPO_COMMIT_SHA }}
-          CRDS_SCHEMA_REPO_COMMIT_SHA=${{ CRDS_SCHEMA_REPO_COMMIT_SHA }}
+          HELM_VERSION=${{ env.HELM_VERSION }}
+          GATOR_VERSION=${{ env.GATOR_VERSION }}
+          DATREE_VERSION=${{ env.DATREE_VERSION }}
+          YQ_VERSION=${{ env.YQ_VERSION }}
+          K8S_SCHEMA_VERSION=${{ env.K8S_SCHEMA_VERSION }}
+          K8S_SCHEMA_REPO_COMMIT_SHA=${{ env.K8S_SCHEMA_REPO_COMMIT_SHA }}
+          CRDS_SCHEMA_REPO_COMMIT_SHA=${{ env.CRDS_SCHEMA_REPO_COMMIT_SHA }}
           VCS_REF=${{ github.ref }}
           BUILD_DATE=${{ github.event.release.published_at }}
 
