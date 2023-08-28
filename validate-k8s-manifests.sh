@@ -23,7 +23,8 @@ usage() {
     --helm-registry-config Path to Helm registry config file (default: ~/.config/helm/registry/config.json)
     --exclude-dirs-regex Regex (grep -E) to exclude directories from validation (default: '(gatekeeper-policies|00-meta-app)')
     --policiy-violation-enforcement Defines if script should exit with an error if Gatekeeper policies are violated or just with the warning and exit code 0. Possible values: (warn|deny) (default: deny)
-    --git-ref-changed-paths A Git ref for comparing HEAD to identify which files have changed"
+    --git-ref-changed-paths A Git ref for comparing HEAD to identify which files have changed
+    --skip-gatekeeper Skip Gatekeeper policy validation"
 }
 
 while [[ "$#" -gt 0 ]]; do
@@ -38,6 +39,7 @@ while [[ "$#" -gt 0 ]]; do
     --helm-registry-config) helm_registry_config="$2"; shift ;;
     --policiy-violation-enforcement) policiy_violation_enforcement="$2"; shift ;;
     --git-ref-changed-paths) git_ref_changed_paths="$2"; shift ;;
+    --skip-gatekeeper) skip_gatekeeper="true"; shift 0 ;;
     *) manifests="$1"; ;;
   esac
   shift
@@ -56,17 +58,22 @@ PARALLEL_MANIFEST_VALIDATIONS="${parallel:-10}"
 HELM_REGISTRY_CONFIG="$([[ -n ${helm_registry_config:-} ]] && printf -- '--registry-config %s' $helm_registry_config || true)"
 POLICIY_VIOLATION_ENFORCEMENT="${policiy_violation_enforcement:-deny}"
 GIT_REF_CHANGED_PATHS="${git_ref_changed_paths:-master}"
+export SKIP_GATEKEEPER="${skip_gatekeeper:-false}"
 export K8S_SCHEMA_VERSION="${k8s_schema_version:-1.25.9}"
 export K8S_SCHEMA_DIR="${k8s_schema_dir:-/schemas/k8s}"
 export K8S_CRDS_DIR="${k8s_crds_dir:-/schemas/crds}"
 export DATREE_POLICY_CONFIG="${datree_policy_config:-datree-policies.yaml}"
 
-# In case lock file (Chart.lock) is out of sync with the dependencies file (Chart.yaml)
-helm dependency build $GATEKEEPER_POLICIES_DIR || helm dependency update $GATEKEEPER_POLICIES_DIR
-mkdir -p "$TMP_DIR/gatekeeper"
-helm template -n default -f $GATEKEEPER_POLICIES_DIR/values.yaml $GATEKEEPER_POLICIES_DIR \
-  --set "expansionTemplate.enabled=true" \
-  --set "defaultPolicies.constraints.defaultEnforcementAction=$POLICIY_VIOLATION_ENFORCEMENT" > $TMP_DIR/gatekeeper/policies.yaml
+if [[ $SKIP_GATEKEEPER == "true" ]]; then
+  echo "Skipping Gatekeeper policy validation"
+else
+  # In case lock file (Chart.lock) is out of sync with the dependencies file (Chart.yaml)
+  helm dependency build $GATEKEEPER_POLICIES_DIR || helm dependency update $GATEKEEPER_POLICIES_DIR
+  mkdir -p "$TMP_DIR/gatekeeper"
+  helm template -n default -f $GATEKEEPER_POLICIES_DIR/values.yaml $GATEKEEPER_POLICIES_DIR \
+    --set "expansionTemplate.enabled=true" \
+    --set "defaultPolicies.constraints.defaultEnforcementAction=$POLICIY_VIOLATION_ENFORCEMENT" > $TMP_DIR/gatekeeper/policies.yaml
+fi
 
 validate_manifests() {
   local values_path=$1
@@ -76,14 +83,16 @@ validate_manifests() {
   echo -e "\nChecking chart with values file $values_path"
   CHART_TEMPLATE="$(helm template -n default -f $dir_name/values.yaml -f $values_path $dir_name)"
 
-  # gator policy check
-  echo "Checking Gatekeeper policy violations"
-  set +e
-  (echo "$CHART_TEMPLATE" | gator test -f $TMP_DIR/gatekeeper/policies.yaml)
-  if [[ $? -gt 0 ]]; then
-    exit_code=1
+  if [[ $SKIP_GATEKEEPER == "false" ]]; then
+    # gator policy check
+    echo "Checking Gatekeeper policy violations"
+    set +e
+    (echo "$CHART_TEMPLATE" | gator test -f $TMP_DIR/gatekeeper/policies.yaml)
+    if [[ $? -gt 0 ]]; then
+      exit_code=1
+    fi
+    set -e
   fi
-  set -e
 
   # datree linting
   echo "Linting Chart template"
@@ -109,7 +118,7 @@ set +o pipefail
 if [[ -n $CHANGED_GIT_PATHS ]]; then
   CHANGED_CHARTS_PATHS=$(find $CHANGED_GIT_PATHS -name Chart.yaml)
 else
-  echo "No charts changed in $K8S_MANIFESTS_DIR. Nothing to do here."
+  echo "No charts changed in '$K8S_MANIFESTS_DIR'. Nothing to do here."
   exit 0
 fi
 
@@ -135,7 +144,9 @@ for path in $CHANGED_CHARTS_PATHS; do
   fi
 done
 yq --indent 0 '.dependencies | map(["helm", "repo", "add", .name, .repository] | join(" ")) | .[]' $TMP_DIR/stub-chart/Chart.yaml | bash --
-helm repo update
+if [[ -n $(helm repo list -o yaml | yq -r '.[]') ]]; then
+  helm repo update
+fi
 
 # Validate manifests
 for path in $CHANGED_CHARTS_PATHS; do
@@ -151,15 +162,15 @@ for path in $CHANGED_CHARTS_PATHS; do
     if [[ $EXIT_CODE -eq 123 ]]; then # invocation of the command inside `xargs` exited with status 1-125
       EXIT_CODE=1
     elif [[ $EXIT_CODE -gt 0 ]]; then
-      echo "Some error occured while executing manifests validation. This is all we know. Exitting early..."
+      echo "❌ An error occured while executing manifests validation. This is all we know. Exitting early..."
       exit $EXIT_CODE
     fi
   fi
 done
 
 if [[ $EXIT_CODE -gt 0 ]]; then
-  echo "Errors occured during manifests validation. Exitting..."
+  echo "❌ Errors occured during manifests validation. Exitting..."
   exit $EXIT_CODE
 else
-  echo "Successfully validated all K8s manifests"
+  echo "✅ Successfully validated all K8s manifests"
 fi
