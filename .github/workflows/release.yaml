@@ -21,9 +21,9 @@ jobs:
       GATOR_VERSION:               "3.12.0"
       DATREE_VERSION:              "1.9.19"
       YQ_VERSION:                  "4.34.2"
-      K8S_SCHEMA_VERSION:          "1.25.9"
-      K8S_SCHEMA_REPO_COMMIT_SHA:  "a43aa7eceaf4c32c5f45c9fc477588e7a12f18b6" # https://github.com/yannh/kubernetes-json-schema
-      CRDS_SCHEMA_REPO_COMMIT_SHA: "8f0604e873746d6b2d49794e5b37768460e7b545" # https://github.com/datreeio/CRDs-catalog/tree/main
+      K8S_SCHEMA_VERSION:          "1.28.5"
+      K8S_SCHEMA_REPO_COMMIT_SHA:  "53453a08d42fcc76ab2f8658f11d20aa07197ba8" # https://github.com/yannh/kubernetes-json-schema
+      CRDS_SCHEMA_REPO_COMMIT_SHA: "89a756e59d7c9524ff07a7408a1d6b8dae5ccce5" # https://github.com/datreeio/CRDs-catalog/tree/main
     steps:
     - name: Checkout
       uses: actions/checkout@v3
