@@ -112,7 +112,7 @@ validate_manifests() {
 export -f validate_manifests
 
 set +o pipefail # mask grep failing on empty input
-CHANGED_GIT_PATHS=$(git diff --name-only $GIT_REF_CHANGED_PATHS... | grep -E "^$K8S_MANIFESTS_DIR/" | grep -vE $EXCLUDE_DIRS_REGEX | cut -d '/' -f1,2 | sort -u)
+CHANGED_GIT_PATHS=$(git diff --name-only $GIT_REF_CHANGED_PATHS... --diff-filter=d | grep -E "^$K8S_MANIFESTS_DIR/" | grep -vE $EXCLUDE_DIRS_REGEX | cut -d '/' -f1,2 | sort -u)
 set +o pipefail
 
 if [[ -n $CHANGED_GIT_PATHS ]]; then
