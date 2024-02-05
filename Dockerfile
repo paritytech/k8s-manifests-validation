@@ -4,6 +4,7 @@ ARG VCS_REF=master
 ARG BUILD_DATE=""
 ARG REGISTRY_PATH=docker.io/paritytech
 ARG HELM_VERSION=3.12.2
+ARG HELM_GIT_PLUGIN_VERSION=0.15.1
 ARG GATOR_VERSION=3.12.0
 ARG DATREE_VERSION=1.9.19
 ARG YQ_VERSION=4.34.2
@@ -33,6 +34,9 @@ RUN set -eu; \
   # helm
   curl -fSsL -o - https://get.helm.sh/helm-v$HELM_VERSION-linux-amd64.tar.gz \
   | tar zx --strip 1 -C /usr/local/bin linux-amd64/helm && \
+  \
+  # helm-git plugin
+  helm plugin install https://github.com/aslafy-z/helm-git --version ${HELM_GIT_PLUGIN_VERSION} && \
   \
   # gator
   curl -fSsL -o - https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-linux-amd64.tar.gz \
